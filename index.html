@@ -457,8 +457,12 @@ iframe{
 
       <div class="section">
         <p class="section__label">1. Dán nội dung thô</p>
+        <div class="chip-toggle">
+          <button type="button" id="btnModeRaw" class="active" onclick="setInputMode('raw')">CMS thô</button>
+          <button type="button" id="btnModeAi" onclick="setInputMode('ai')">Code AI (dịch ngược)</button>
+        </div>
         <textarea id="rawInput" placeholder="Dán nguyên khối HTML bài viết (các thẻ <p>, <h3>, <table class=&quot;picture&quot;>, <notebox>, <table class=&quot;article&quot;>...) từ CMS vào đây."></textarea>
-        <p class="section__hint">Công cụ tự nhận diện: đoạn văn (&lt;p&gt;), tiêu đề mục (&lt;h3&gt;), ảnh + chú thích (&lt;table class="picture"&gt;), notebox sách/tác giả (&lt;notebox&gt; có "Tác giả/Tác phẩm"), notebox quảng bá khác, và link bài liên quan (&lt;table class="article"&gt;).</p>
+        <p class="section__hint" id="rawInputHint">Công cụ tự nhận diện: đoạn văn (&lt;p&gt;), tiêu đề mục (&lt;h3&gt;), ảnh + chú thích (&lt;table class="picture"&gt;), notebox sách/tác giả (&lt;notebox&gt; có "Tác giả/Tác phẩm"), notebox quảng bá khác, và link bài liên quan (&lt;table class="article"&gt;).</p>
         <button class="btn btn--ghost" style="width:100%;margin-top:10px" onclick="parseInput()">Phân tích nội dung →</button>
 
         <div class="guideBox">
@@ -471,6 +475,7 @@ iframe{
           <p class="guideBox__note"><strong>Lưu ý:</strong> bài viết cần để ở định dạng hiển thị Mini Magazine và Special. Bài có giới thiệu sách cần đặt một notebox, gồm thông tin tên sách, tác giả, năm xuất bản, nhà xuất bản và tóm tắt nội dung.</p>
           <p class="guideBox__note"><strong>Ảnh bìa sách:</strong> chèn ảnh đơn của bìa vào bài trong CMS, copy mã ảnh đó dán vào ô "Ảnh bìa" ở bước 4, rồi chọn hướng Ngang hoặc Dọc cho phù hợp với tỉ lệ ảnh thật.</p>
           <p class="guideBox__note"><strong>Khi đăng bài, cần tick chọn loại bài "AI" để đảm bảo tốc độ tải trang.</strong></p>
+          <p class="guideBox__note"><strong>Dịch ngược code AI:</strong> nếu đã có sẵn bài do AI soạn thảo tự do (viết ngoài công cụ này, có thể lệch class/CSS/cấu trúc), chọn chế độ "Code AI (dịch ngược)" ở trên rồi dán nguyên khối HTML đó vào — công cụ tự nhận diện lại tiêu đề/sapo, đoạn văn, ảnh, quote, notebox, endnote... và chuẩn hoá về đúng khung cố định của skill này ở bước "Tạo HTML".</p>
         </div>
       </div>
 
@@ -520,6 +525,7 @@ iframe{
         </div>
 
         <div id="summaryFields" style="display:none">
+          <p class="section__hint" id="autofillHintSummary" style="display:none">Đã tự điền từ notebox "Tóm tắt nhanh" có sẵn trong nội dung dán vào, kiểm tra lại trước khi tạo.</p>
           <label class="field"><span class="lbl">Tiêu đề tóm tắt (không phải tên sách)</span><input type="text" id="smTitle" placeholder="Ví dụ: Vì sao AI đang gom mua sách cũ"></label>
           <label class="field"><span class="lbl">Các gạch đầu dòng (mỗi dòng 1 ý, 3-5 dòng)</span><textarea id="smBullets" placeholder="Mỗi dòng là 1 gạch đầu dòng"></textarea></label>
         </div>
@@ -564,9 +570,12 @@ let coverOrientation = 'landscape'; // 'landscape' (căn giữa, full width) | '
 let quotes = {};         // { blockIndex: { text, source, keepOriginal } }
 let quoteOrder = [];      // thứ tự bấm để gán trái/phải nhất quán
 let autoBook = null;     // auto-detected book info from pasted <notebox>
+let autoSummary = null;  // auto-detected "Tóm tắt nhanh" info (chế độ dịch ngược code AI)
 let autoEndnote = null;  // auto-detected leftover notebox -> endnote
 let autoRelated = [];    // auto-detected related links
 let autoHero = null;     // auto-detected hero image/figure before first <p>
+let inputMode = 'raw';   // 'raw' = dán HTML thô từ CMS | 'ai' = dịch ngược code AI đã tạo sẵn
+let autoNoteboxAfterIdx = null; // vị trí chèn notebox tự nhận diện được khi dịch ngược code AI
 
 // ============================================================
 // 1. PARSE
@@ -597,21 +606,80 @@ function parseInput(){
   const raw = document.getElementById('rawInput').value.trim();
   if(!raw){ alert('Dán nội dung trước đã.'); return; }
 
-  const wrap = document.createElement('div');
-  wrap.innerHTML = raw;
-
   blocks = [];
   autoBook = null;
+  autoSummary = null;
   autoEndnote = null;
   autoRelated = [];
   autoHero = null;
+  autoNoteboxAfterIdx = null;
   quotes = {};
   quoteOrder = [];
-  setCoverOrientation('landscape');
-
-  let seenFirstP = false;
 
   try {
+
+    if(inputMode === 'ai'){
+      // Chế độ dịch ngược: reset về mặc định rồi để parseAiCode tự suy ra
+      // format/bookMode/coverOrientation từ chính cấu trúc code AI dán vào.
+      format = 'thuong';
+      bookMode = true;
+      setCoverOrientation('landscape');
+      document.getElementById('lfTitle').value = '';
+      document.getElementById('lfSapo').value = '';
+      parseAiCode(raw);
+      setFormat(format);
+      setBookMode(bookMode);
+    } else {
+      setCoverOrientation('landscape');
+      parseRawCms(raw);
+    }
+
+    renderParsedList();
+    populateNoteboxPositions();
+    if(autoNoteboxAfterIdx !== null){
+      const sel = document.getElementById('noteboxPos');
+      const has = Array.from(sel.options).some(o => Number(o.value) === autoNoteboxAfterIdx);
+      if(has) sel.value = autoNoteboxAfterIdx;
+    }
+    applyAutoBookFields();
+    applyAutoSummaryFields();
+    checkEmdash();
+
+    document.getElementById('parsedSection').style.display = 'block';
+    document.getElementById('formatSection').style.display = 'block';
+    document.getElementById('bookSection').style.display = 'block';
+    document.getElementById('genSection').style.display = 'block';
+
+  } catch(err){
+    console.error('Lỗi khi phân tích nội dung:', err);
+    alert('Không phân tích được nội dung. Lỗi: ' + err.message + '\n\nGửi lại đúng dòng lỗi này (và nếu được, mở Console trình duyệt bằng phím F12 để xem thêm chi tiết) để debug tiếp.');
+  }
+}
+
+function setInputMode(v){
+  inputMode = v;
+  document.getElementById('btnModeRaw').classList.toggle('active', v==='raw');
+  document.getElementById('btnModeAi').classList.toggle('active', v==='ai');
+  const ta = document.getElementById('rawInput');
+  const hint = document.getElementById('rawInputHint');
+  if(v === 'ai'){
+    ta.placeholder = 'Dán nguyên khối HTML bài viết sách do AI tạo sẵn (có thể nguyên file với <article class="container_AI">... hoặc chỉ phần bên trong, miễn còn giữ các class h1.cAI__h1, p.cAI__p, h3.cAI__h3, .cAI__intro-note, .cAI__quote, .cAI__endnote, .cAI__related...).';
+    hint.textContent = 'Dùng khi đã có bài do AI soạn thảo tự do (không qua công cụ này, có thể lệch class/CSS/cấu trúc). Công cụ tự nhận diện tiêu đề (h1)/sapo, đoạn văn, tiêu đề mục, ảnh + caption, notebox sách/tóm tắt nhanh, quote, endnote và bài liên quan dựa theo đúng class cAI__ đã dùng, rồi chuẩn hoá lại khi bấm "Tạo HTML".';
+  } else {
+    ta.placeholder = 'Dán nguyên khối HTML bài viết (các thẻ <p>, <h3>, <table class="picture">, <notebox>, <table class="article">...) từ CMS vào đây.';
+    hint.textContent = 'Công cụ tự nhận diện: đoạn văn (<p>), tiêu đề mục (<h3>), ảnh + chú thích (<table class="picture">), notebox sách/tác giả (<notebox> có "Tác giả/Tác phẩm"), notebox quảng bá khác, và link bài liên quan (<table class="article">).';
+  }
+}
+
+// ------------------------------------------------------------
+// 1a. Chế độ "CMS thô": dán HTML gốc lấy từ CMS (table.picture,
+// <notebox>, table.article...) và suy ra cấu trúc bài sách.
+// ------------------------------------------------------------
+function parseRawCms(raw){
+  const wrap = document.createElement('div');
+  wrap.innerHTML = raw;
+
+  let seenFirstP = false;
 
   Array.from(wrap.children).forEach(el => {
     const tag = el.tagName.toLowerCase();
@@ -732,20 +800,192 @@ function parseInput(){
       return;
     }
   });
+}
 
-  renderParsedList();
-  populateNoteboxPositions();
-  applyAutoBookFields();
-  checkEmdash();
+// ------------------------------------------------------------
+// 1b. Chế độ "Code AI (dịch ngược)": dán nguyên khối HTML mà AI đã
+// tạo sẵn (đúng khung class cAI__... nhưng có thể lệch CSS/cấu trúc
+// so với chuẩn cố định) và suy ngược lại thành dữ liệu có cấu trúc,
+// dùng chung buildBody()/FIXED_CSS để tái tạo code đúng chuẩn CMS.
+// ------------------------------------------------------------
+function parseAiCode(raw){
+  let root = null;
+  try{
+    const doc = new DOMParser().parseFromString(raw, 'text/html');
+    root = doc.querySelector('.cAI__wrap') || doc.querySelector('.container_AI') || doc.body;
+  } catch(e){
+    root = null;
+  }
+  if(!root || !root.children || !root.children.length){
+    const d = document.createElement('div');
+    d.innerHTML = raw;
+    root = d.querySelector('.cAI__wrap') || d.querySelector('.container_AI') || d;
+  }
 
-  document.getElementById('parsedSection').style.display = 'block';
-  document.getElementById('formatSection').style.display = 'block';
-  document.getElementById('bookSection').style.display = 'block';
-  document.getElementById('genSection').style.display = 'block';
+  function stripClassAttr(html){
+    return html.replace(/\s*class="[^"]*"/i, '');
+  }
 
-  } catch(err){
-    console.error('Lỗi khi phân tích nội dung:', err);
-    alert('Không phân tích được nội dung. Lỗi: ' + err.message + '\n\nGửi lại đúng dòng lỗi này (và nếu được, mở Console trình duyệt bằng phím F12 để xem thêm chi tiết) để debug tiếp.');
+  function extractFigure(el){
+    const img = el.querySelector('img');
+    const cap = el.querySelector('figcaption');
+    return {
+      imgHtml: img ? img.outerHTML : '',
+      captionHtml: cap ? cap.innerHTML.trim() : ''
+    };
+  }
+
+  let seenFirstP = false;
+  let leftQuoteIdx = null, rightQuoteIdx = null;
+  let noteboxSeen = false;
+
+  Array.from(root.children).forEach(el => {
+    const tag = el.tagName.toLowerCase();
+    const cls = el.classList;
+
+    if(tag === 'h1' && cls.contains('cAI__h1')){
+      format = 'longform';
+      document.getElementById('lfTitle').value = el.textContent.trim();
+      return;
+    }
+
+    if(cls.contains('cAI__sapo')){
+      document.getElementById('lfSapo').value = el.textContent.trim();
+      return;
+    }
+
+    if(tag === 'figure' && cls.contains('cAI__figure') && !seenFirstP){
+      const { imgHtml, captionHtml } = extractFigure(el);
+      autoHero = imgHtml + (captionHtml ? `\n    <figcaption>${captionHtml}</figcaption>` : '');
+      return;
+    }
+
+    if(tag === 'p' && cls.contains('cAI__p')){
+      seenFirstP = true;
+      const html = el.innerHTML.trim();
+      if(html) blocks.push({ type:'p', html });
+      return;
+    }
+
+    if(tag === 'h3' && cls.contains('cAI__h3')){
+      seenFirstP = true;
+      blocks.push({ type:'h3', text: el.textContent.trim() });
+      return;
+    }
+
+    if(tag === 'figure' && cls.contains('cAI__figure')){
+      seenFirstP = true;
+      const { imgHtml, captionHtml } = extractFigure(el);
+      blocks.push({ type:'figure', imgHtml, captionHtml });
+      return;
+    }
+
+    if(tag === 'div' && cls.contains('cAI__quote')){
+      const side = cls.contains('left') ? 'left' : 'right';
+      const qtextEl = el.querySelector('.cAI__qtext');
+      const qsrcEl = el.querySelector('.cAI__qsource');
+      const qtext = qtextEl ? qtextEl.textContent.trim() : stripTags(el.innerHTML);
+      const qsource = qsrcEl ? qsrcEl.textContent.trim() : '';
+
+      const prev = blocks[blocks.length - 1];
+      const norm = s => stripTags(s).replace(/\s+/g,' ').trim().toLowerCase();
+      const dup = prev && prev.type === 'p' && norm(prev.html) === norm(qtext);
+
+      let idx;
+      if(dup){
+        idx = blocks.length - 1;
+        quotes[idx] = { text: qtext, source: qsource, keepOriginal: true };
+      } else {
+        blocks.push({ type:'p', html: qtext });
+        idx = blocks.length - 1;
+        quotes[idx] = { text: qtext, source: qsource, keepOriginal: false };
+      }
+      if(side === 'left' && leftQuoteIdx === null) leftQuoteIdx = idx;
+      else if(rightQuoteIdx === null) rightQuoteIdx = idx;
+      return;
+    }
+
+    if(tag === 'div' && cls.contains('cAI__intro-note')){
+      if(noteboxSeen){
+        // Notebox pastel phụ (VD "Về tác giả bài viết") — công cụ hiện chỉ
+        // dựng lại 1 notebox đầu bài, nên giữ nguyên nội dung dưới dạng
+        // đoạn văn thường để không mất dữ liệu, cần rà lại/tạo tay thêm.
+        blocks.push({ type:'p', html: '<em>[Notebox phụ phát hiện được, cần dựng lại thủ công]</em> ' + el.innerHTML.trim() });
+        return;
+      }
+      noteboxSeen = true;
+      autoNoteboxAfterIdx = blocks.length - 1;
+
+      const kickerEl = el.querySelector('.cAI__note-kicker');
+      const kickerText = kickerEl ? kickerEl.textContent.trim() : '';
+      const metaEl = el.querySelector('.cAI__note-meta');
+      const isBook = /tác giả\s*\/\s*tác phẩm/i.test(kickerText) || !!metaEl;
+
+      if(isBook){
+        bookMode = true;
+        const coverEl = el.querySelector('.cAI__note-cover');
+        coverOrientation = (coverEl && coverEl.classList.contains('cAI__note-cover--portrait')) ? 'portrait' : 'landscape';
+        const titleEl = el.querySelector('.cAI__note-title');
+        const descEls = el.querySelectorAll('.cAI__note-desc');
+
+        let authorPart = '', datePart = '', publisherPart = '';
+        if(metaEl){
+          const metaText = metaEl.textContent;
+          const am = metaText.match(/tác giả\s*:\s*(.+?)\s*(?:·|xuất bản\s*:)/i);
+          const dm = metaText.match(/xuất bản\s*:\s*(.+)$/i);
+          if(am) authorPart = am[1].trim();
+          if(dm){
+            const m = dm[1].match(/^(.*?)\s*(?:·|-)\s*(.+)$/);
+            if(m){ datePart = m[1].trim(); publisherPart = m[2].trim(); }
+            else datePart = dm[1].trim();
+          }
+        }
+
+        autoBook = {
+          coverImgHtml: coverEl ? stripClassAttr(coverEl.outerHTML) : '',
+          title: titleEl ? titleEl.textContent.trim() : '',
+          authorPart, datePart, publisherPart,
+          descs: Array.from(descEls).map(d => d.innerHTML.trim())
+        };
+      } else {
+        bookMode = false;
+        const titleEl = el.querySelector('.cAI__note-title');
+        const items = el.querySelectorAll('.cAI__note-list li');
+        autoSummary = {
+          title: titleEl ? titleEl.textContent.trim() : '',
+          bullets: Array.from(items).map(li => li.innerHTML.trim())
+        };
+      }
+      return;
+    }
+
+    if(tag === 'div' && cls.contains('cAI__endnote')){
+      const titleEl = el.querySelector('.cAI__note-title');
+      const descEls = Array.from(el.querySelectorAll('p')).filter(p => p !== titleEl);
+      autoEndnote = {
+        title: titleEl ? titleEl.textContent.trim() : '',
+        descs: descEls.map(p => p.innerHTML.trim())
+      };
+      return;
+    }
+
+    if(tag === 'div' && cls.contains('cAI__related')){
+      autoRelated = Array.from(el.querySelectorAll('.cAI__related-item a')).map(a => ({
+        href: a.getAttribute('href') || '',
+        text: a.textContent.trim()
+      }));
+      return;
+    }
+  });
+
+  quoteOrder = [leftQuoteIdx, rightQuoteIdx].filter(x => x !== null);
+}
+
+function applyAutoSummaryFields(){
+  if(autoSummary){
+    document.getElementById('autofillHintSummary').style.display = 'block';
+    document.getElementById('smTitle').value = autoSummary.title || '';
+    document.getElementById('smBullets').value = (autoSummary.bullets || []).map(b => stripTags(b)).join('\n');
   }
 }
 
