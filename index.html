@@ -278,6 +278,19 @@ label.field .lbl{
   color:#8a6d1a;
 }
 
+.blockItem__alignSelect{
+  width:auto;
+  flex:0 0 auto;
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:4px 6px;
+  font-size:11px;
+  font-family:'Inter',sans-serif;
+  color:var(--ink-soft);
+  background:var(--white);
+  cursor:pointer;
+}
+
 .quoteEditor{
   padding:10px 12px 12px;
   background:#fffaf0;
@@ -713,7 +726,8 @@ function parseRawCms(raw){
       blocks.push({
         type:'figure',
         imgHtml: img ? img.outerHTML : '',
-        captionHtml: capP ? capP.innerHTML.trim() : ''
+        captionHtml: capP ? capP.innerHTML.trim() : '',
+        align: 'center'
       });
       return;
     }
@@ -876,7 +890,8 @@ function parseAiCode(raw){
     if(tag === 'figure' && cls.contains('cAI__figure')){
       seenFirstP = true;
       const { imgHtml, captionHtml } = extractFigure(el);
-      blocks.push({ type:'figure', imgHtml, captionHtml });
+      const align = cls.contains('cAI__figure--left') ? 'left' : cls.contains('cAI__figure--right') ? 'right' : 'center';
+      blocks.push({ type:'figure', imgHtml, captionHtml, align });
       return;
     }
 
@@ -992,6 +1007,7 @@ function applyAutoSummaryFields(){
 function renderParsedList(){
   const list = document.getElementById('parsedList');
   list.innerHTML = '';
+  let imgCount = 0;
   blocks.forEach((b, i) => {
     const container = document.createElement('div');
 
@@ -1007,7 +1023,10 @@ function renderParsedList(){
     textEl.className = 'blockItem__text';
     if(b.type === 'p') textEl.textContent = stripTags(b.html).slice(0,140) + (stripTags(b.html).length>140?'…':'');
     else if(b.type === 'h3') textEl.textContent = b.text;
-    else textEl.textContent = '[Ảnh] ' + (b.captionHtml ? stripTags(b.captionHtml).slice(0,100) : '(không caption)');
+    else {
+      imgCount++;
+      textEl.textContent = 'Ảnh ' + imgCount + ': ' + (b.captionHtml ? stripTags(b.captionHtml).slice(0,90) : '(không caption)');
+    }
     row.appendChild(textEl);
 
     if(b.type === 'p'){
@@ -1017,6 +1036,22 @@ function renderParsedList(){
       qbtn.textContent = isOn ? '★ Đang là quote' : 'Đặt làm quote';
       qbtn.onclick = () => toggleQuote(i);
       row.appendChild(qbtn);
+    }
+
+    if(b.type === 'figure'){
+      if(!b.align) b.align = 'center';
+      const alignSel = document.createElement('select');
+      alignSel.className = 'blockItem__alignSelect';
+      alignSel.title = 'Căn ảnh này';
+      [['center','Căn giữa'], ['left','Căn trái'], ['right','Căn phải']].forEach(([val, label]) => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = label;
+        if(b.align === val) opt.selected = true;
+        alignSel.appendChild(opt);
+      });
+      alignSel.onchange = () => { b.align = alignSel.value; };
+      row.appendChild(alignSel);
     }
 
     container.appendChild(row);
@@ -1224,9 +1259,21 @@ const FIXED_CSS = `
 .container_AI figure.cAI__figure img{ width:100%; height:auto; display:block; border:1px solid var(--line); }
 .container_AI figure.cAI__figure figcaption{
   font-family:'Inter',sans-serif !important; font-style:normal !important; font-size:13px; color:var(--muted);
-  line-height:1.6; margin-top:10px; text-align:center;
+  line-height:1.6; margin-top:10px; text-align:left;
 }
 .container_AI figure.cAI__figure figcaption em{ font-style:italic !important; }
+.container_AI figure.cAI__figure.cAI__figure--left{
+  clear:none; float:left; width:48%; max-width:340px; margin:6px 24px 20px 0;
+}
+.container_AI figure.cAI__figure.cAI__figure--right{
+  clear:none; float:right; width:48%; max-width:340px; margin:6px 0 20px 24px;
+}
+@media (max-width:640px){
+  .container_AI figure.cAI__figure.cAI__figure--left,
+  .container_AI figure.cAI__figure.cAI__figure--right{
+    float:none; width:100%; max-width:100%; margin:28px 0;
+  }
+}
 
 .container_AI .cAI__quote{ margin:6px 0 22px; padding:0 4px; max-width:320px; }
 .container_AI .cAI__quote.left{ float:left; margin-right:26px; text-align:left; }
@@ -1315,7 +1362,8 @@ function buildBody(){
       out.push(`  <h3 class="cAI__h3">${fixEmdash(b.text)}</h3>`);
     } else if(b.type === 'figure'){
       const cap = b.captionHtml ? `\n    <figcaption>${fixEmdash(normalizeCaption(b.captionHtml))}</figcaption>` : '';
-      out.push(`  <figure class="cAI__figure">\n    ${b.imgHtml}${cap}\n  </figure>`);
+      const alignCls = b.align === 'left' ? ' cAI__figure--left' : b.align === 'right' ? ' cAI__figure--right' : '';
+      out.push(`  <figure class="cAI__figure${alignCls}">\n    ${b.imgHtml}${cap}\n  </figure>`);
     }
 
     if(i === noteboxAfterIdx){
