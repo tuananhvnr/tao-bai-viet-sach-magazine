@@ -488,7 +488,7 @@ iframe{
           <p class="guideBox__note"><strong>Lưu ý:</strong> bài viết cần để ở định dạng hiển thị Mini Magazine và Special. Bài có giới thiệu sách cần đặt một notebox, gồm thông tin tên sách, tác giả, năm xuất bản, nhà xuất bản và tóm tắt nội dung.</p>
           <p class="guideBox__note"><strong>Ảnh bìa sách:</strong> chèn ảnh đơn của bìa vào bài trong CMS, copy mã ảnh đó dán vào ô "Ảnh bìa" ở bước 4, rồi chọn hướng Ngang hoặc Dọc cho phù hợp với tỉ lệ ảnh thật.</p>
           <p class="guideBox__note"><strong>Khi đăng bài, cần tick chọn loại bài "AI" để đảm bảo tốc độ tải trang.</strong></p>
-          <p class="guideBox__note"><strong>Dịch ngược code AI:</strong> nếu đã có sẵn bài do AI soạn thảo tự do (viết ngoài công cụ này, có thể lệch class/CSS/cấu trúc), chọn chế độ "Code AI (dịch ngược)" ở trên rồi dán nguyên khối HTML đó vào — công cụ tự nhận diện lại tiêu đề/sapo, đoạn văn, ảnh, quote, notebox, endnote... và chuẩn hoá về đúng khung cố định của skill này ở bước "Tạo HTML".</p>
+          <p class="guideBox__note"><strong>Dịch ngược code AI:</strong> dùng khi đã có 1 bài ở dạng chuẩn <code>cAI__</code> (do công cụ này tạo, hoặc AI viết đúng khung đó) và cần trả về đúng code CMS thường — ví dụ khi tự chèn thêm ảnh/đoạn kiểu CMS gốc vào giữa bài, hoặc khi cần gỡ bỏ style AI. Chọn chế độ "Code AI (dịch ngược)" ở trên, dán nguyên khối HTML <code>cAI__</code> đó vào — công cụ tự nhận diện tiêu đề/sapo, đoạn văn, ảnh, quote, notebox, endnote... rồi ở bước "Tạo HTML" sẽ xuất ra đúng <code>&lt;p&gt;</code>, <code>&lt;h3&gt;</code>, <code>&lt;table class="picture"&gt;</code>, <code>&lt;notebox&gt;</code> — không còn class/CSS/quote nổi bật.</p>
         </div>
       </div>
 
@@ -551,7 +551,7 @@ iframe{
       <div class="section" id="genSection" style="display:none">
         <p class="section__label">5. Tạo bài</p>
         <div id="emdashWarn"></div>
-        <p class="section__hint">Rà lại các mục trên, rồi bấm nút <strong>"Tạo HTML"</strong> ở góc trên bên phải, code sẽ hiện ở khung bên phải.</p>
+        <p class="section__hint" id="genModeHint">Rà lại các mục trên, rồi bấm nút <strong>"Tạo HTML"</strong> ở góc trên bên phải, code sẽ hiện ở khung bên phải.</p>
       </div>
 
     </div>
@@ -676,11 +676,15 @@ function setInputMode(v){
   const ta = document.getElementById('rawInput');
   const hint = document.getElementById('rawInputHint');
   if(v === 'ai'){
-    ta.placeholder = 'Dán nguyên khối HTML bài viết sách do AI tạo sẵn (có thể nguyên file với <article class="container_AI">... hoặc chỉ phần bên trong, miễn còn giữ các class h1.cAI__h1, p.cAI__p, h3.cAI__h3, .cAI__intro-note, .cAI__quote, .cAI__endnote, .cAI__related...).';
-    hint.textContent = 'Dùng khi đã có bài do AI soạn thảo tự do (không qua công cụ này, có thể lệch class/CSS/cấu trúc). Công cụ tự nhận diện tiêu đề (h1)/sapo, đoạn văn, tiêu đề mục, ảnh + caption, notebox sách/tóm tắt nhanh, quote, endnote và bài liên quan dựa theo đúng class cAI__ đã dùng, rồi chuẩn hoá lại khi bấm "Tạo HTML".';
+    ta.placeholder = 'Dán nguyên khối HTML bài viết dạng chuẩn cAI__ (do công cụ này tạo, hoặc AI viết đúng khung đó — có <article class="container_AI">... hoặc chỉ phần bên trong, còn class h1.cAI__h1, p.cAI__p, h3.cAI__h3, .cAI__intro-note, .cAI__quote, .cAI__endnote, .cAI__related...).';
+    hint.textContent = 'Dịch NGƯỢC: input là code cAI__ (đã có AI thiết kế), output là code CMS THƯỜNG — <p>, <h3>, <table class="picture">, <notebox>, <table class="article"> — không class/CSS, không h1/sapo/quote nổi bật, đúng như bài trước khi chèn AI vào. Dùng khi cần gỡ style AI, hoặc khi tự chèn thêm ảnh/đoạn kiểu CMS gốc vào giữa 1 bài đã ở dạng cAI__.';
+    const genHint = document.getElementById('genModeHint');
+    if(genHint) genHint.innerHTML = 'Rà lại các mục trên, rồi bấm <strong>"Tạo HTML"</strong> — output sẽ là <strong>code CMS thường</strong> (không class/CSS, không h1/sapo/quote nổi bật). Tiêu đề/sapo cần điền vào trường riêng của CMS, không nằm trong code này.';
   } else {
     ta.placeholder = 'Dán nguyên khối HTML bài viết (các thẻ <p>, <h3>, <table class="picture">, <notebox>, <table class="article">...) từ CMS vào đây.';
     hint.textContent = 'Công cụ tự nhận diện: đoạn văn (<p>), tiêu đề mục (<h3>), ảnh + chú thích (<table class="picture">), notebox sách/tác giả (<notebox> có "Tác giả/Tác phẩm"), notebox quảng bá khác, và link bài liên quan (<table class="article">).';
+    const genHint2 = document.getElementById('genModeHint');
+    if(genHint2) genHint2.innerHTML = 'Rà lại các mục trên, rồi bấm nút <strong>"Tạo HTML"</strong> ở góc trên bên phải — output sẽ là <strong>code chuẩn cAI__</strong> (có CSS/style AI đầy đủ), code sẽ hiện ở khung bên phải.';
   }
 }
 
@@ -692,13 +696,19 @@ function parseRawCms(raw){
   const wrap = document.createElement('div');
   wrap.innerHTML = raw;
 
+  // Ảnh copy từ CMS đôi khi mang sẵn style="float:..." nội tuyến — bỏ đi vì
+  // việc căn ảnh giờ do class cAI__figure--left/--right kiểm soát.
+  function stripStyleAttr(html){
+    return html.replace(/\s*style="[^"]*"/i, '');
+  }
+
   let seenFirstP = false;
 
   Array.from(wrap.children).forEach(el => {
     const tag = el.tagName.toLowerCase();
 
     if(tag === 'img' && !seenFirstP){
-      autoHero = el.outerHTML;
+      autoHero = stripStyleAttr(el.outerHTML);
       return;
     }
 
@@ -725,7 +735,7 @@ function parseRawCms(raw){
       }
       blocks.push({
         type:'figure',
-        imgHtml: img ? img.outerHTML : '',
+        imgHtml: img ? stripStyleAttr(img.outerHTML) : '',
         captionHtml: capP ? capP.innerHTML.trim() : '',
         align: 'center'
       });
@@ -817,10 +827,15 @@ function parseRawCms(raw){
 }
 
 // ------------------------------------------------------------
-// 1b. Chế độ "Code AI (dịch ngược)": dán nguyên khối HTML mà AI đã
-// tạo sẵn (đúng khung class cAI__... nhưng có thể lệch CSS/cấu trúc
-// so với chuẩn cố định) và suy ngược lại thành dữ liệu có cấu trúc,
-// dùng chung buildBody()/FIXED_CSS để tái tạo code đúng chuẩn CMS.
+// 1b. Chế độ "Code AI (dịch ngược)" — INPUT: dán nguyên khối HTML dạng
+// chuẩn cAI__ (do công cụ này tạo, hoặc AI viết đúng khung đó — có thể
+// lệch CSS/cấu trúc nhẹ so với chuẩn cố định). Hàm này chỉ ĐỌC/suy ra dữ
+// liệu có cấu trúc (blocks, autoBook, autoHero...); phần OUTPUT thực tế
+// của chế độ dịch ngược — trả về đúng code CMS THƯỜNG, không class/CSS —
+// nằm ở buildNativeBody()/buildNativeNotebox() (gọi từ generateOutput()).
+// Để chắc chắn không rỗng dữ liệu khi input lệch class đôi chút, hàm cũng
+// suy theo tên thẻ (h1, p, h2/h3, blockquote, img, ul...) nếu không thấy
+// đúng class cAI__ tương ứng.
 // ------------------------------------------------------------
 function parseAiCode(raw){
   let root = null;
@@ -835,73 +850,198 @@ function parseAiCode(raw){
     d.innerHTML = raw;
     root = d.querySelector('.cAI__wrap') || d.querySelector('.container_AI') || d;
   }
+  // Nếu toàn bộ nội dung bị bọc trong 1 lớp wrapper ngoài (VD AI bọc thêm
+  // <div class="article-content">...</div>), tự đi sâu vào trong (tối đa
+  // 2 lớp) để tìm đúng danh sách nội dung thật sự.
+  for(let depth = 0; depth < 2; depth++){
+    if(root.children.length === 1){
+      const only = root.children[0];
+      const onlyTag = only.tagName.toLowerCase();
+      if(['div','section','article'].includes(onlyTag)){
+        root = only;
+        continue;
+      }
+    }
+    break;
+  }
 
   function stripClassAttr(html){
     return html.replace(/\s*class="[^"]*"/i, '');
+  }
+
+  // Ảnh copy từ CMS đôi khi mang sẵn style="float:..." nội tuyến — cần bỏ vì
+  // việc căn ảnh giờ do class cAI__figure--left/--right kiểm soát, để lại
+  // style cũ sẽ gây float lồng float, lệch layout.
+  function stripStyleAttr(html){
+    return html.replace(/\s*style="[^"]*"/i, '');
   }
 
   function extractFigure(el){
     const img = el.querySelector('img');
     const cap = el.querySelector('figcaption');
     return {
-      imgHtml: img ? img.outerHTML : '',
+      imgHtml: img ? stripStyleAttr(img.outerHTML) : '',
       captionHtml: cap ? cap.innerHTML.trim() : ''
     };
   }
 
+  // Trích tên sách/tác giả/ngày xuất bản/NXB/mô tả từ danh sách "dòng" văn
+  // bản — dùng chung cho cả notebox đúng chuẩn lẫn khối fallback không class.
+  function extractBookInfo(lines){
+    let title = '', authorPart = '', datePart = '', publisherPart = '', descs = [];
+    lines.forEach(t => {
+      if(/^tác giả\s*\/\s*tác phẩm$/i.test(t)) return;
+      if(/^giới thiệu sách$/i.test(t)) return;
+      const hasAuthor = /tác giả\s*:/i.test(t);
+      const hasDate = /xuất bản\s*:/i.test(t);
+      if(hasAuthor && hasDate){
+        const am = t.match(/tác giả\s*:\s*(.+?)\s*(?:·|xuất bản\s*:)/i);
+        const dm = t.match(/xuất bản\s*:\s*(.+)$/i);
+        if(am) authorPart = am[1].trim();
+        if(dm){
+          const m = dm[1].match(/^(.*?)\s*(?:·|-)\s*(.+)$/);
+          if(m){ datePart = m[1].trim(); publisherPart = m[2].trim(); } else datePart = dm[1].trim();
+        }
+      } else if(hasAuthor){
+        authorPart = t.replace(/^.*?tác giả\s*:\s*/i, '').trim();
+      } else if(hasDate){
+        const rest = t.replace(/^.*?xuất bản\s*:\s*/i, '').trim();
+        const m = rest.match(/^(.*?)\s*(?:·|-)\s*(.+)$/);
+        if(m){ datePart = m[1].trim(); publisherPart = m[2].trim(); } else datePart = rest;
+      } else if(!title){
+        title = t;
+      } else {
+        descs.push(t);
+      }
+    });
+    return { title, authorPart, datePart, publisherPart, descs };
+  }
+
+  function getTextLines(container){
+    const lines = [];
+    Array.from(container.querySelectorAll('p,li')).forEach(p => {
+      const parts = p.innerHTML.split(/<br\s*\/?>/i);
+      parts.forEach(part => {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = part;
+        const t = tmp.textContent.trim();
+        if(t) lines.push(t);
+      });
+    });
+    return lines;
+  }
+
   let seenFirstP = false;
+  let pendingSapo = false;
+  let titleSet = false;
   let leftQuoteIdx = null, rightQuoteIdx = null;
   let noteboxSeen = false;
 
   Array.from(root.children).forEach(el => {
     const tag = el.tagName.toLowerCase();
     const cls = el.classList;
+    const text = (el.textContent || '').trim();
 
-    if(tag === 'h1' && cls.contains('cAI__h1')){
+    if(['script','style','link','meta','noscript'].includes(tag)) return;
+
+    // ---- Tiêu đề (h1, có hoặc không class cAI__h1) — chỉ nhận thẻ đầu tiên ----
+    if(tag === 'h1' && !titleSet){
       format = 'longform';
       document.getElementById('lfTitle').value = el.textContent.trim();
+      titleSet = true;
+      pendingSapo = true;
       return;
     }
 
-    if(cls.contains('cAI__sapo')){
+    // ---- Sapo: có class cAI__sapo, HOẶC đơn giản là <p> đứng ngay sau h1 ----
+    if(cls.contains('cAI__sapo') || (pendingSapo && tag === 'p')){
       document.getElementById('lfSapo').value = el.textContent.trim();
+      pendingSapo = false;
+      return;
+    }
+    pendingSapo = false;
+
+    // ---- Ảnh hero (trước nội dung đầu tiên): figure/img có hoặc không class ----
+    if((tag === 'figure' || tag === 'img') && !seenFirstP){
+      if(tag === 'figure'){
+        const { imgHtml, captionHtml } = extractFigure(el);
+        autoHero = imgHtml + (captionHtml ? `\n    <figcaption>${captionHtml}</figcaption>` : '');
+      } else {
+        autoHero = stripStyleAttr(el.outerHTML);
+      }
       return;
     }
 
-    if(tag === 'figure' && cls.contains('cAI__figure') && !seenFirstP){
-      const { imgHtml, captionHtml } = extractFigure(el);
-      autoHero = imgHtml + (captionHtml ? `\n    <figcaption>${captionHtml}</figcaption>` : '');
-      return;
-    }
-
-    if(tag === 'p' && cls.contains('cAI__p')){
+    // ---- Đoạn văn thường: <p> có hoặc không class cAI__p ----
+    if(tag === 'p'){
       seenFirstP = true;
       const html = el.innerHTML.trim();
       if(html) blocks.push({ type:'p', html });
       return;
     }
 
-    if(tag === 'h3' && cls.contains('cAI__h3')){
+    // ---- Tiêu đề mục: cAI__h3, hoặc <h2>/<h3> thường ----
+    if(tag === 'h3' || tag === 'h2'){
       seenFirstP = true;
       blocks.push({ type:'h3', text: el.textContent.trim() });
       return;
     }
 
-    if(tag === 'figure' && cls.contains('cAI__figure')){
+    // ---- Danh sách gạch đầu dòng (AI hay chèn khi liệt kê ý) → gộp thành 1 đoạn ----
+    if(tag === 'ul' || tag === 'ol'){
+      seenFirstP = true;
+      const items = Array.from(el.children).filter(c => c.tagName.toLowerCase() === 'li').map(li => li.innerHTML.trim());
+      if(items.length) blocks.push({ type:'p', html: items.join('<br>') });
+      return;
+    }
+
+    // ---- Ảnh nội dung: figure/img có hoặc không class cAI__figure ----
+    if(tag === 'figure'){
       seenFirstP = true;
       const { imgHtml, captionHtml } = extractFigure(el);
       const align = cls.contains('cAI__figure--left') ? 'left' : cls.contains('cAI__figure--right') ? 'right' : 'center';
       blocks.push({ type:'figure', imgHtml, captionHtml, align });
       return;
     }
+    if(tag === 'img'){
+      seenFirstP = true;
+      blocks.push({ type:'figure', imgHtml: stripStyleAttr(el.outerHTML), captionHtml:'', align:'center' });
+      return;
+    }
 
-    if(tag === 'div' && cls.contains('cAI__quote')){
-      const side = cls.contains('left') ? 'left' : 'right';
-      const qtextEl = el.querySelector('.cAI__qtext');
-      const qsrcEl = el.querySelector('.cAI__qsource');
-      const qtext = qtextEl ? qtextEl.textContent.trim() : stripTags(el.innerHTML);
-      const qsource = qsrcEl ? qsrcEl.textContent.trim() : '';
+    // ---- Ảnh kiểu CMS gốc (<table class="picture">) chèn xen vào bài —
+    // trường hợp thường gặp khi người dùng thêm ảnh mới copy trực tiếp từ
+    // CMS vào giữa bài đã ở dạng chuẩn cAI__. ----
+    if(tag === 'table' && cls.contains('picture')){
+      seenFirstP = true;
+      const img = el.querySelector('img');
+      const capP = el.querySelector('.pCaption p') || el.querySelector('.pCaption');
+      blocks.push({
+        type:'figure',
+        imgHtml: img ? stripStyleAttr(img.outerHTML) : '',
+        captionHtml: capP ? capP.innerHTML.trim() : '',
+        align: 'center'
+      });
+      return;
+    }
 
+    // ---- Quote: div.cAI__quote chuẩn, HOẶC <blockquote> thường ----
+    if((tag === 'div' && cls.contains('cAI__quote')) || tag === 'blockquote'){
+      let qtext = '', qsource = '';
+      if(cls.contains('cAI__quote')){
+        const qtextEl = el.querySelector('.cAI__qtext');
+        const qsrcEl = el.querySelector('.cAI__qsource');
+        qtext = qtextEl ? qtextEl.textContent.trim() : stripTags(el.innerHTML);
+        qsource = qsrcEl ? qsrcEl.textContent.trim() : '';
+      } else {
+        const clone = el.cloneNode(true);
+        const citeEl = clone.querySelector('cite, footer');
+        if(citeEl){ qsource = citeEl.textContent.trim(); citeEl.remove(); }
+        qtext = clone.textContent.trim();
+      }
+      if(!qtext) return;
+
+      const side = cls.contains('left') ? 'left' : cls.contains('right') ? 'right' : (leftQuoteIdx === null ? 'left' : 'right');
       const prev = blocks[blocks.length - 1];
       const norm = s => stripTags(s).replace(/\s+/g,' ').trim().toLowerCase();
       const dup = prev && prev.type === 'p' && norm(prev.html) === norm(qtext);
@@ -920,6 +1060,7 @@ function parseAiCode(raw){
       return;
     }
 
+    // ---- Notebox sách/tóm tắt đúng chuẩn (class cAI__intro-note) ----
     if(tag === 'div' && cls.contains('cAI__intro-note')){
       if(noteboxSeen){
         // Notebox pastel phụ (VD "Về tác giả bài viết") — công cụ hiện chỉ
@@ -942,24 +1083,12 @@ function parseAiCode(raw){
         coverOrientation = (coverEl && coverEl.classList.contains('cAI__note-cover--portrait')) ? 'portrait' : 'landscape';
         const titleEl = el.querySelector('.cAI__note-title');
         const descEls = el.querySelectorAll('.cAI__note-desc');
-
-        let authorPart = '', datePart = '', publisherPart = '';
-        if(metaEl){
-          const metaText = metaEl.textContent;
-          const am = metaText.match(/tác giả\s*:\s*(.+?)\s*(?:·|xuất bản\s*:)/i);
-          const dm = metaText.match(/xuất bản\s*:\s*(.+)$/i);
-          if(am) authorPart = am[1].trim();
-          if(dm){
-            const m = dm[1].match(/^(.*?)\s*(?:·|-)\s*(.+)$/);
-            if(m){ datePart = m[1].trim(); publisherPart = m[2].trim(); }
-            else datePart = dm[1].trim();
-          }
-        }
+        const info = metaEl ? extractBookInfo([metaEl.textContent]) : { authorPart:'', datePart:'', publisherPart:'' };
 
         autoBook = {
           coverImgHtml: coverEl ? stripClassAttr(coverEl.outerHTML) : '',
           title: titleEl ? titleEl.textContent.trim() : '',
-          authorPart, datePart, publisherPart,
+          authorPart: info.authorPart, datePart: info.datePart, publisherPart: info.publisherPart,
           descs: Array.from(descEls).map(d => d.innerHTML.trim())
         };
       } else {
@@ -974,6 +1103,7 @@ function parseAiCode(raw){
       return;
     }
 
+    // ---- Endnote / bài liên quan đúng chuẩn (chỉ nhận theo class, tránh nhận nhầm) ----
     if(tag === 'div' && cls.contains('cAI__endnote')){
       const titleEl = el.querySelector('.cAI__note-title');
       const descEls = Array.from(el.querySelectorAll('p')).filter(p => p !== titleEl);
@@ -983,13 +1113,39 @@ function parseAiCode(raw){
       };
       return;
     }
-
     if(tag === 'div' && cls.contains('cAI__related')){
       autoRelated = Array.from(el.querySelectorAll('.cAI__related-item a')).map(a => ({
         href: a.getAttribute('href') || '',
         text: a.textContent.trim()
       }));
       return;
+    }
+
+    // ---- Fallback: khối chứa thông tin sách nhưng KHÔNG đúng class chuẩn
+    // (VD AI bọc trong <div>/<aside>/<section> có đủ "Tác giả:"/"Xuất bản:").
+    // Chỉ nhận khi khối này "gọn" (không lồng heading/ảnh/list/quote bên
+    // trong) để tránh nuốt nhầm cả 1 wrapper lớn chứa toàn bộ bài viết. ----
+    if(!noteboxSeen && ['div','aside','section'].includes(tag) &&
+       /tác giả\s*:/i.test(text) && /xuất bản\s*:/i.test(text) &&
+       !el.querySelector('h1,h2,h3,h4,img,figure,blockquote,ul,ol')){
+      noteboxSeen = true;
+      autoNoteboxAfterIdx = blocks.length - 1;
+      bookMode = true;
+      const img = el.querySelector('img');
+      const info = extractBookInfo(getTextLines(el));
+      autoBook = {
+        coverImgHtml: img ? stripClassAttr(img.outerHTML) : '',
+        title: info.title, authorPart: info.authorPart, datePart: info.datePart,
+        publisherPart: info.publisherPart, descs: info.descs
+      };
+      return;
+    }
+
+    // ---- Còn lại: không nhận diện được (VD div/table lạ) — giữ nguyên nội
+    // dung dạng đoạn văn kèm ghi chú, để không mất dữ liệu, cần rà lại. ----
+    if(text){
+      seenFirstP = true;
+      blocks.push({ type:'p', html: '<em>[Nội dung chưa nhận diện được, cần rà lại]</em> ' + el.innerHTML.trim() });
     }
   });
 
@@ -1336,6 +1492,10 @@ function buildBody(){
     if(autoHero){
       out.push(`  <figure class="cAI__figure">\n    ${autoHero}\n  </figure>`);
     }
+  } else if(autoHero){
+    // Định dạng Thường không có vị trí "hero" riêng (bài bắt đầu thẳng vào
+    // lede) — để không mất ảnh, đưa ảnh mở đầu vào làm ảnh nội dung đầu tiên.
+    out.push(`  <figure class="cAI__figure">\n    ${autoHero}\n  </figure>`);
   }
 
   let pCount = 0;
@@ -1384,6 +1544,101 @@ function buildBody(){
   return out.join('\n\n');
 }
 
+// ------------------------------------------------------------
+// Chế độ "Code AI (dịch ngược)" — OUTPUT: dựng lại đúng code CMS THƯỜNG
+// (trước khi chèn AI vào), tức <p>, <h3>, <table class="picture">,
+// <notebox>, <table class="article"> — không class, không CSS, không
+// h1/sapo/quote nổi bật (những thứ đó là do AI thêm vào, CMS gốc không có).
+// ------------------------------------------------------------
+function plainCaption(html){
+  if(!html) return '';
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  d.querySelectorAll('em, i').forEach(el => el.replaceWith(...el.childNodes));
+  return d.innerHTML.trim();
+}
+
+function stripHeroCaption(heroHtml){
+  // autoHero có thể là "<img ...>\n    <figcaption>...</figcaption>" — ảnh
+  // mở đầu ở CMS gốc là 1 thẻ <img> trần, không có caption riêng.
+  if(!heroHtml) return '';
+  const idx = heroHtml.indexOf('<figcaption');
+  return (idx === -1 ? heroHtml : heroHtml.slice(0, idx)).trim();
+}
+
+function buildNativeNotebox(){
+  const lines = ['<notebox>'];
+  if(bookMode){
+    const title = fixEmdash(document.getElementById('bkTitle').value.trim());
+    const author = fixEmdash(document.getElementById('bkAuthor').value.trim());
+    const date = fixEmdash(document.getElementById('bkDate').value.trim());
+    const pub = fixEmdash(document.getElementById('bkPublisher').value.trim());
+    const cover = document.getElementById('bkCover').value.trim();
+    const descs = document.getElementById('bkDesc').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    lines.push('  <p>Tác giả/Tác phẩm</p>');
+    if(cover) lines.push('  ' + cover);
+    lines.push(`  <p>${title}</p>`);
+    lines.push(`  <p>Tác giả: ${author} · Xuất bản: ${date}${pub ? ' - ' + pub : ''}</p>`);
+    descs.forEach(d => lines.push(`  <p>${fixEmdash(d)}</p>`));
+  } else {
+    const title = fixEmdash(document.getElementById('smTitle').value.trim());
+    const bullets = document.getElementById('smBullets').value.split('\n').map(s=>s.trim()).filter(Boolean);
+    lines.push(`  <p>${title}</p>`);
+    bullets.forEach(b => lines.push(`  <p>${fixEmdash(stripTags(b))}</p>`));
+  }
+  lines.push('</notebox>');
+  return lines.join('\n');
+}
+
+function buildNativeGenericNotebox(title, descs){
+  const lines = ['<notebox>'];
+  lines.push(`  <p>${fixEmdash(title)}</p>`);
+  (descs || []).forEach(d => lines.push(`  <p>${fixEmdash(stripTags(d))}</p>`));
+  lines.push('</notebox>');
+  return lines.join('\n');
+}
+
+function buildNativeBody(){
+  const noteboxAfterIdx = parseInt(document.getElementById('noteboxPos').value, 10);
+  let out = [];
+
+  // Ảnh mở đầu: trả về đúng dạng <img> trần trước đoạn đầu tiên, không
+  // bọc figure/caption (h1/sapo của longform cũng là phần AI thêm vào —
+  // CMS gốc không lưu tiêu đề/sapo trong nội dung bài, bỏ qua khi xuất).
+  if(autoHero){
+    out.push(stripHeroCaption(autoHero));
+  }
+
+  blocks.forEach((b, i) => {
+    if(b.type === 'p'){
+      // Quote nổi bật là phần AI thêm vào — trả về đúng 1 đoạn văn thường,
+      // bỏ khối trích dẫn float trái/phải.
+      out.push(`<p>${fixEmdash(b.html)}</p>`);
+    } else if(b.type === 'h3'){
+      out.push(`<h3>${fixEmdash(b.text)}</h3>`);
+    } else if(b.type === 'figure'){
+      const capText = b.captionHtml ? `<p>${fixEmdash(plainCaption(b.captionHtml))}</p>` : '<p></p>';
+      out.push(`<table class="picture" align="center">\n  <tbody>\n    <tr>\n      <td class="pic">${b.imgHtml}</td>\n    </tr>\n    <tr>\n      <td class="pCaption caption">\n        ${capText}\n      </td>\n    </tr>\n  </tbody>\n</table>`);
+    }
+
+    if(i === noteboxAfterIdx){
+      out.push(buildNativeNotebox());
+    }
+  });
+
+  if(autoEndnote){
+    out.push(buildNativeGenericNotebox(autoEndnote.title, autoEndnote.descs));
+  }
+
+  if(autoRelated.length){
+    autoRelated.forEach(r => {
+      out.push(`<table class="article">\n  <tbody>\n    <tr>\n      <td><a href="${r.href}">${fixEmdash(r.text)}</a></td>\n    </tr>\n  </tbody>\n</table>`);
+    });
+  }
+
+  return out.join('\n\n');
+}
+
 function buildNotebox(){
   if(bookMode){
     const title = fixEmdash(document.getElementById('bkTitle').value.trim());
@@ -1410,8 +1665,17 @@ function generateOutput(){
   if(!blocks.length){ alert('Phân tích nội dung trước đã (bước 1).'); return; }
 
   try{
-    const body = buildBody();
-    const html = `<!DOCTYPE html>
+    let html, previewHtml;
+
+    if(inputMode === 'ai'){
+      // Dịch ngược: output là code CMS THƯỜNG, không style/CSS, dán thẳng
+      // vào ô nội dung CMS (không phải file HTML đầy đủ).
+      const body = buildNativeBody();
+      html = body;
+      previewHtml = `<!DOCTYPE html>\n<html lang="vi">\n<head><meta charset="UTF-8"></head>\n<body>\n\n${body}\n\n</body>\n</html>\n`;
+    } else {
+      const body = buildBody();
+      html = `<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -1431,12 +1695,14 @@ ${body}
 </body>
 </html>
 `;
+      previewHtml = html;
+    }
 
     lastOutput = html;
     document.getElementById('outputCode').textContent = html;
 
     const iframe = document.createElement('iframe');
-    iframe.srcdoc = html;
+    iframe.srcdoc = previewHtml;
     const wrap = document.getElementById('previewWrap');
     wrap.innerHTML = '';
     wrap.appendChild(iframe);
