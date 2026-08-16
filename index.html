@@ -599,6 +599,16 @@ function stripTags(html){
   return d.textContent.trim();
 }
 
+// Trình soạn thảo CMS hay tự chèn đoạn rỗng kiểu <p><br></p> hoặc
+// <p>&nbsp;</p> khi dán ảnh/định dạng nội dung — coi là "rỗng" (bỏ qua khi
+// phân tích) nếu không có chữ thật và cũng không chứa ảnh.
+function isBlankParagraph(el){
+  const text = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
+  if(text) return false;
+  if(el.querySelector('img')) return false;
+  return true;
+}
+
 function normalizeCaption(html){
   if(!html) return '';
   const d = document.createElement('div');
@@ -713,6 +723,7 @@ function parseRawCms(raw){
     }
 
     if(tag === 'p'){
+      if(isBlankParagraph(el)) return;
       seenFirstP = true;
       const html = el.innerHTML.trim();
       if(html) blocks.push({ type:'p', html });
@@ -943,6 +954,10 @@ function parseAiCode(raw){
     const text = (el.textContent || '').trim();
 
     if(['script','style','link','meta','noscript'].includes(tag)) return;
+
+    // Bỏ qua đoạn <p> rỗng do trình soạn thảo CMS tự chèn (VD khi dán ảnh
+    // bìa vào đầu bài) — không để nó bị hiểu nhầm thành sapo hoặc đoạn văn.
+    if(tag === 'p' && isBlankParagraph(el)) return;
 
     // ---- Tiêu đề (h1, có hoặc không class cAI__h1) — chỉ nhận thẻ đầu tiên ----
     if(tag === 'h1' && !titleSet){
